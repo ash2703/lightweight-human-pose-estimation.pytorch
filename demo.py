@@ -1,5 +1,6 @@
 import argparse
 
+import os
 import cv2
 import numpy as np
 import torch
@@ -13,8 +14,11 @@ from val import normalize, pad_width
 
 class ImageReader(object):
     def __init__(self, file_names):
-        self.file_names = file_names
-        self.max_idx = len(file_names)
+        self.root = file_names[0]
+        self.file_names = os.listdir(file_names[0]) if os.path.isdir(file_names[0]) else file_names
+        print(self.file_names)
+        self.idx = 0
+        self.max_idx = len(self.file_names)
 
     def __iter__(self):
         self.idx = 0
@@ -23,7 +27,7 @@ class ImageReader(object):
     def __next__(self):
         if self.idx == self.max_idx:
             raise StopIteration
-        img = cv2.imread(self.file_names[self.idx], cv2.IMREAD_COLOR)
+        img = cv2.imread(os.path.join(self.root,self.file_names[self.idx]), cv2.IMREAD_COLOR)
         if img.size == 0:
             raise IOError('Image {} cannot be read'.format(self.file_names[self.idx]))
         self.idx = self.idx + 1
@@ -79,6 +83,7 @@ def infer_fast(net, img, net_input_height_size, stride, upsample_ratio, cpu,
 
 
 def run_demo(net, image_provider, height_size, cpu, track, smooth):
+    
     net = net.eval()
     if not cpu:
         net = net.cuda()
@@ -125,15 +130,17 @@ def run_demo(net, image_provider, height_size, cpu, track, smooth):
             if track:
                 cv2.putText(img, 'id: {}'.format(pose.id), (pose.bbox[0], pose.bbox[1] - 16),
                             cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255))
-        cv2.imshow('Lightweight Human Pose Estimation Python Demo', img)
-        key = cv2.waitKey(delay)
-        if key == 27:  # esc
-            return
-        elif key == 112:  # 'p'
-            if delay == 33:
-                delay = 0
-            else:
-                delay = 33
+        # print("showing")
+        cv2.imwrite(f"outputs/demo-{image_provider.idx}.jpg", img)
+        # cv2.imshow('Lightweight Human Pose Estimation Python Demo', img)
+        # key = cv2.waitKey(delay)
+        # if key == 27:  # esc
+        #     return
+        # elif key == 112:  # 'p'
+        #     if delay == 33:
+        #         delay = 0
+        #     else:
+        #         delay = 33
 
 
 if __name__ == '__main__':
